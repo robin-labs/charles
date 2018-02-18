@@ -12,7 +12,9 @@ import robin.pulse
 import robin.plotting.util
 import robin.util
 
+
 SPEED_OF_SOUND = 343 # m/s
+
 
 # Shhhhhh
 class DeviceShim(object):
@@ -78,10 +80,7 @@ def simple_head_attenuation_model(position):
 	norm_position = position / np.linalg.norm(position)
 	ear_normals = [
 		n / np.linalg.norm(n)
-		for n in [
-			(-1, 0),
-			(1, 0),
-		]
+		for n in [(-1, 0), (1, 0)]
 	]
 	projections = [
 		np.dot(norm_position, ear_normals[i])
@@ -91,7 +90,6 @@ def simple_head_attenuation_model(position):
 	res = [projection_to_attenuation(p) for p in projections]
 	print "ATTN", res
 	return res
-
 
 
 def simple_attenuation_coeff(distance, surface_area, air_loss_coeff=None):
