@@ -1,20 +1,20 @@
 from __future__ import division
 
+import math
+
 import matplotlib
 matplotlib.use('TkAgg')
 
 import scikits.audiolab
 import numpy as np
-import resampy
 import matplotlib.pyplot as plt
-
 import robin.pulse
 import robin.plotting.util
 import robin.util
 
+import hrtf
 
 SPEED_OF_SOUND = 343 # m/s
-
 
 # Shhhhhh
 class DeviceShim(object):
@@ -30,13 +30,15 @@ class EchoSource(object):
 		self.surface_area = surface_area
 		self.refraction = refraction
 
+	def azimuth(self):
+		return (180 / math.pi) * (
+			math.pi - math.atan2(self.position[1], self.position[0]))
+
 
 class HeadModel(object):
-	def __init__(self, ear_distance=0.1, attenutation_coeff_fn=None):
+	def __init__(self, hrtf_data_getter, ear_distance=0.1):
+		self.hrtf_data_getter = hrtf_data_getter
 		self.ear_distance = ear_distance
-		if attenutation_coeff_fn is None:
-			attenutation_coeff_fn = lambda *args: [1, 1]
-		self.attenutation_coeff_fn = attenutation_coeff_fn
 
 	def ear_positions(self):
 		return [
@@ -44,8 +46,17 @@ class HeadModel(object):
 			(self.ear_distance, 0)
 		]
 
+	def apply_hrtf(self, sample, source, channel):
+		input_power = np.sum(sample ** 2)
+		ir = self.hrtf_data_getter(0, source.azimuth())[:,channel]
+		output = np.convolve(sample, ir)
+		output_power = np.sum(output ** 2)
+		print output_power / input_power
+		print "max", np.max(output), np.max(sample)
+		return output / 100
 
-class Delayed(object):
+
+class SceneItem(object):
 	def __init__(self, sound, sample_delay=0, start_delay=0):
 		self.sound = sound
 		self.sample_delay = sample_delay
@@ -137,11 +148,11 @@ def render_scene(device, pulse, head, echo_sources,
 	# Add the initial pulse
 	layers.append(
 		as_channels(*[
-			Delayed(
+			SceneItem(
 				rendered_pulse,
 				start_delay=start_delay
 			).render_for_scene(sample_duration)[:,0],
-			Delayed(
+			SceneItem(
 				rendered_pulse,
 				start_delay=start_delay
 			).render_for_scene(sample_duration)[:,1],
@@ -165,23 +176,23 @@ def render_scene(device, pulse, head, echo_sources,
 			simple_attenuation_coeff(distance, source.surface_area)
 			for distance in distances
 		]
-		attenuations = np.multiply(
-			attenuations,
-			head.attenutation_coeff_fn(source.position)
-		)
-		layers.append(
-			as_channels(*[
-				Delayed(
+		rendered_data = as_channels(*[
+			head.apply_hrtf(
+				SceneItem(
 					attenuations[channel] * rendered_pulse,
 					delays[channel],
 					start_delay
-				).render_for_scene(sample_duration)[:,channel]
-				for channel in channels
-			])
-		)
+				).render_for_scene(sample_duration)[:,channel],
+				source,
+				channel
+			)
+			for channel in channels
+		])
+		layers.append(rendered_data)
 	result = empty_layer()
 	for layer in layers:
-		result = result + layer
+		result = robin.util.zero_pad(
+			result, right_length=(len(layer) - len(result))) + layer
 	return result
 
 
@@ -191,12 +202,18 @@ ECHO_SOURCES = [
 ]
 
 
+ECHO_SOURCES = [
+EchoSource((0, 3), 1),
+	EchoSource((3, 3), 3),
+]
+
+
 if __name__ == "__main__":
 	fs = 96000
-	f0, f1, dur = 2.0e4, 3.5e4, 1e6 * 0.005
+	f0, f1, dur = 1.0e4, 2.0e4, 1e6 * 0.005
 	np_format = np.int16
 	device = DeviceShim(fs, 2, np_format)
-	head = HeadModel(attenutation_coeff_fn=simple_head_attenuation_model)
+	head = HeadModel(hrtf.make_hrtf_data_getter(fs))
 	chirp = robin.pulse.Chirp(f0, f1, dur)
 	scene = render_scene(device, chirp, head, ECHO_SOURCES, 1e5, fs, 50)
 	write_scene(scene, fs)
