@@ -3,47 +3,18 @@ from __future__ import division
 import math
 import random
 
-import matplotlib
-matplotlib.use('TkAgg')
-
-import scikits.audiolab
 import numpy as np
-import matplotlib.pyplot as plt
 import robin.pulse
 import robin.plotting.util
 import hrtf
 
-from render import EchoSource, HeadModel, OutputLayer, Layer, Timeline
-
-
-# Shhhhhh
-class DeviceShim(object):
-	def __init__(self, rate, channels, np_format):
-		self.rate = rate
-		self.channels = channels
-		self.np_format = np_format
-
-
-def write_scene(scene, fs):
-	sf = scikits.audiolab.Sndfile(
-		'output.wav',
-		format=scikits.audiolab.Format(),
-		channels=2,
-		samplerate=fs,
-		mode='w'
-	)
-	sf.write_frames(scene / 32768)
-
-
-def plot_scene(scene, fs):
-	t_axis = robin.util.t_axis(scene, fs)
-	robin.plotting.util.plot_stereo(t_axis, scene[:,0], scene[:,1])
-
+from render import EchoSource, HeadModel, Layer, EchoLayer, Timeline
+from util import DeviceShim, write_scene
 
 def render_scene(device, rnd_pulse, head_model, echo_sources, 
 		us_duration, fs, itd_compress=20):
-	return Timeline([OutputLayer(rnd_pulse)] + [
-		Layer(rnd_pulse, echo_source, head_model, itd_compress)
+	return Timeline([Layer(rnd_pulse)] + [
+		EchoLayer(rnd_pulse, echo_source, head_model, itd_compress)
 		for echo_source in echo_sources
 	]).render(fs)
 
@@ -58,7 +29,7 @@ ECHO_SOURCES = [
 	EchoSource((3, 3), 3),
 ]
 
-def generate_random_echo_sources(n=5, dist_bounds=(1,5), sa_bounds=(0.5, 1)):
+def generate_random_echo_sources(n=5, dist_bounds=(2,3), sa_bounds=(0.5, 0.5)):
 	for i in xrange(n):
 		azm = random.random() * 180
 		dist = dist_bounds[0] + random.random() * dist_bounds[1]
@@ -69,11 +40,11 @@ def generate_random_echo_sources(n=5, dist_bounds=(1,5), sa_bounds=(0.5, 1)):
 
 if __name__ == "__main__":
 	fs = 96000
-	f0, f1, dur = 1.0e4, 2.0e4, 1e6 * 0.005
+	f0, f1, dur = 2.0e4, 3.0e4, 1e6 * 0.005
 	np_format = np.int16
 	device = DeviceShim(fs, 2, np_format)
 	chirp = robin.pulse.Chirp(f0, f1, dur).render(device)
-	head = HeadModel(hrtf.make_hrtf_data_getter(fs))
-	echo_sources = generate_random_echo_sources()
+	head = HeadModel(hrtf.make_hrtf_data_getter(fs)[0])
+	echo_sources = CIRCULAR_ECHO_SOURCES
 	scene = render_scene(device, chirp, head, echo_sources, 1e5, fs, 20)
-	write_scene(scene, fs)
+	write_scene(fs, scene  / 32768, "output.wav")

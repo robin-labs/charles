@@ -23,7 +23,7 @@ def moderate_itds_for(delays, itd_compress):
 	mean = (left + right) / 2
 	difference = left - right
 	new_difference = difference / itd_compress
-	return map(int, [mean + new_difference / 2, mean - new_difference / 2])
+ 	return map(int, [mean + new_difference / 2, mean - new_difference / 2])
 
 
 class EchoSource(object):
@@ -33,8 +33,10 @@ class EchoSource(object):
 		self.refraction = refraction
 
 	def azimuth(self):
-		return (180 / math.pi) * (
-			math.pi - math.atan2(self.position[1], self.position[0]))
+		return (-180 / math.pi) * (
+			math.atan2(self.position[1], self.position[0]) - 
+			math.pi / 2
+		)
 
 	def distance_to_point(self, point):
 		(x1, y1), (x2, y2) = self.position, point
@@ -63,17 +65,18 @@ class HeadModel(object):
 		return output / 100
 
 
-class OutputLayer(object):
-	def __init__(self, rnd_pulse):
+class Layer(object):
+	def __init__(self, rnd_pulse, delays=(0, 0)):
 		self.rnd_pulse = rnd_pulse
+		self.delays = delays
 		self.CHANNELS = xrange(2)
 
 	def render(self, fs):
 		for i in self.CHANNELS:
-			yield self.rnd_pulse[:, i], 0
+			yield self.rnd_pulse[:, i], self.delays[i]
 
 
-class Layer(object):
+class EchoLayer(object):
 	def __init__(self, rnd_pulse, echo_source, head_model, itd_compress=1):
 		self.rnd_pulse = rnd_pulse
 		self.echo_source = echo_source
@@ -101,6 +104,7 @@ class Layer(object):
 					channel
 				)
 			)
+		channel_delays = moderate_itds_for(channel_delays, self.itd_compress)
 		for i in self.CHANNELS:
 			yield samples[i], channel_delays[i]
 
