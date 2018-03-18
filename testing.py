@@ -11,6 +11,7 @@ import hrtf
 from render import EchoSource, HeadModel, Layer, EchoLayer, Timeline
 from util import DeviceShim, write_scene
 
+
 def render_scene(device, rnd_pulse, head_model, echo_sources, 
 		us_duration, fs, itd_compress=20):
 	return Timeline([Layer(rnd_pulse)] + [
@@ -40,11 +41,11 @@ def generate_random_echo_sources(n=5, dist_bounds=(2,3), sa_bounds=(0.5, 0.5)):
 
 if __name__ == "__main__":
 	fs = 96000
-	f0, f1, dur = 2.0e4, 3.0e4, 1e6 * 0.005
+	f0, f1, dur = 1.0e4, 2.2e4, 1e6 * 0.005
 	np_format = np.int16
 	device = DeviceShim(fs, 2, np_format)
 	chirp = robin.pulse.Chirp(f0, f1, dur).render(device)
 	head = HeadModel(hrtf.make_hrtf_data_getter(fs)[0])
 	echo_sources = CIRCULAR_ECHO_SOURCES
 	scene = render_scene(device, chirp, head, echo_sources, 1e5, fs, 20)
-	write_scene(fs, scene  / 32768, "output.wav")
+	write_scene(fs, scene  / 32768, "circular.wav")
