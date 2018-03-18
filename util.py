@@ -1,4 +1,4 @@
-import matplotlib
+import random
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,14 +8,11 @@ import scikits.audiolab
 
 
 class DeviceShim(object):
+	"""Lets us interface with Robin code without making a fuss"""
 	def __init__(self, rate, channels, np_format):
 		self.rate = rate
 		self.channels = channels
 		self.np_format = np_format
-
-
-def normalize_angle_with_offset(theta, offset):
-	return (theta % 360) + offset
 
 
 def convolve_multi_channel(a, b):
