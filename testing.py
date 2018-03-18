@@ -1,7 +1,6 @@
 from __future__ import division
 
 import math
-import random
 
 import numpy as np
 import robin.pulse
@@ -14,13 +13,13 @@ from util import DeviceShim, write_scene
 
 
 CIRCULAR_ECHO_SOURCES = [
-	EchoSource((1 * (i + 1) * np.cos(a), 1 * (i + 1) * np.sin(a)), i ** 0.75)
-	for i, a in enumerate(np.linspace(0, np.pi, 10))
+    EchoSource((1 * (i + 1) * np.cos(a), 1 * (i + 1) * np.sin(a)), i ** 0.75)
+    for i, a in enumerate(np.linspace(0, np.pi, 10))
 ]
 
 ECHO_SOURCES = [
-	EchoSource((0, 3), 1),
-	EchoSource((3, 3), 3),
+    EchoSource((0, 3), 1),
+    EchoSource((3, 3), 3),
 ]
 
 
@@ -34,10 +33,10 @@ echo_sources = CIRCULAR_ECHO_SOURCES
 
 
 def write_differential_scenes():
-	normalized = render_scene(fs, device, chirp, head, echo_sources, 20)
-	unnormalized = render_scene(fs, device, chirp, head, echo_sources, 1)
-	write_scene(fs, normalized  / 32768, "output/diff/normalized.wav")
-	write_scene(fs, unnormalized / 32768, "output/diff/unnormalized.wav")
+    normalized = render_scene(fs, device, chirp, head, echo_sources, 20)
+    unnormalized = render_scene(fs, device, chirp, head, echo_sources, 1)
+    write_scene(fs, normalized  / 32768, "output/diff/normalized.wav")
+    write_scene(fs, unnormalized / 32768, "output/diff/unnormalized.wav")
 
 
 if __name__ == "__main__":
