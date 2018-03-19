@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 
 import os
 import re
@@ -20,13 +20,13 @@ def read_hrtf_azimuths_from_directory(elevation):
             raise Exception("Your regex doesn't work, dummy!")
 
 
-def read_hrtf_filter(elevation, azimuth, fs=44100, dtype=np.int16):
+def read_hrtf_filter(elevation, azimuth, fs=44100, dtype=np.float64):
     path = os.path.join(
         "hrtf",
         "elev{0}".format(str(elevation)),
         "H{0}e{1}a.dat".format(str(elevation), str(azimuth).zfill(3))
     )
-    data = np.fromfile(file(path, "rb"), np.dtype(">i2"), 256)
+    data = np.fromfile(file(path, "rb"), np.dtype(">i2"), 256) / 16384
     data.shape = (128, 2)
     return samplerate.resample(data, fs / 44100, "sinc_best").astype(dtype)
 
@@ -53,5 +53,5 @@ def make_hrtf_data_getter(fs, elevations=[0], dtype=None):
             possible_azimuths,
             key=lambda p: abs(p - azimuth)
         )[0]
-        return filters[elevation][closest_azimuth].astype(np.int16)
+        return filters[elevation][closest_azimuth]
     return getter, possible

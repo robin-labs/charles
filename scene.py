@@ -4,6 +4,9 @@ import math
 import random
 
 import numpy as np
+from robin.plotting.util import plot_samples
+
+from util import plot_scene 
 
 class EchoSource(object):
     def __init__(self, position, surface_area=1, refraction=1):
@@ -35,17 +38,11 @@ class HeadModel(object):
 
     def apply_hrtf(self, sample, source, channel):
         sample_at_channel = sample[:, channel]
-        input_power = np.sum(sample_at_channel ** 2)
         impulse_response = (
             self.hrtf_data_getter(0, source.azimuth())[:, channel]
         )
         output = np.convolve(sample_at_channel, impulse_response)
-        output_power = np.sum(output ** 2) / len(ou)
-        print output_power / input_power
-        print "max", np.max(output), np.max(sample)
-        print "npf", sample_at_channel.dtype, impulse_response.dtype, output.dtype
-        return output / 100
-
+        return output
 
 def generate_random_echo_sources(n=5, dist_bounds=(2,3), sa_bounds=(0.5, 0.5)):
     for _ in xrange(n):
