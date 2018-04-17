@@ -30,6 +30,7 @@ def read_hrtf_filter(elevation, azimuth, fs=44100, dtype=np.float64):
     data.shape = (128, 2)
     return samplerate.resample(data, fs / 44100, "sinc_best").astype(dtype)
 
+
 def make_hrtf_data_getter(fs, elevations=[0], dtype=None):
     filters = {}
     for elevation in elevations:
