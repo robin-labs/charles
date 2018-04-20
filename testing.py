@@ -10,6 +10,7 @@ import hrtf
 from scene import EchoSource, HeadModel
 from render import EchoLayer, Layer, Timeline, render_scene
 from util import DeviceShim, write_scene
+from thaler_click import ExpertClick
 
 
 CIRCULAR_ECHO_SOURCES = [
@@ -22,9 +23,6 @@ REVERSE_CIRCULAR_ECHO_SOURCES = [
     for i, a in enumerate(np.linspace(0, np.pi, 10))
 ]
 
-print [s.position for s in CIRCULAR_ECHO_SOURCES]
-print [s.position for s in REVERSE_CIRCULAR_ECHO_SOURCES]
-
 ECHO_SOURCES = [
     EchoSource((0, 3), 4),
     EchoSource((3, 3), 8),
@@ -32,22 +30,25 @@ ECHO_SOURCES = [
     EchoSource((-1.5, 1.5), 4),
 ]
 
+def single_echo_source(dist, az, area=1):
+    return [EchoSource((-dist * np.cos(az), dist * np.sin(az)), area)]
 
 fs = 96000
 f0, f1, dur = 1.0e4, 2.2e4, 1e6 * 0.001
 np_format = np.float64
 device = DeviceShim(fs, 2, np_format)
-pulse = robin.pulse.Chirp(f0, f1, dur).render(device)
+pulse = ExpertClick().render(device)
 head = HeadModel(hrtf.make_hrtf_data_getter(fs)[0])
-echo_sources = REVERSE_CIRCULAR_ECHO_SOURCES
 
+print pulse
 
-def write_differential_scenes(name):
-    normalized = render_scene(fs, device, pulse, head, echo_sources, 1 / 0.03)
-    unnormalized = render_scene(fs, device, pulse, head, echo_sources, 1)
-    write_scene(fs, normalized, "output/{0}-normalized.wav".format(name))
-    write_scene(fs, unnormalized, "output/{0}-unnormalized.wav".format(name))
+def write_scenes(name):
+    for az in np.linspace(0, 180, 19):
+        az_rad = az * np.pi / 180
+        echo_sources = single_echo_source(1, az_rad)
+        scene = render_scene(fs, device, pulse, head, echo_sources, 1)
+        write_scene(fs, scene, "output/{0}-{1}.wav".format(name, az))
 
 
 if __name__ == "__main__":
-    write_differential_scenes("chirp-short-reverse-circular")
+    write_scenes("ee1")

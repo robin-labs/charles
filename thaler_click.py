@@ -37,7 +37,7 @@ class ThalerClick(robin.pulse.Pulse):
         us_duration = (c - (np.log(1e-3) / b)) * 1e6
         super(ThalerClick, self).__init__(us_duration)
 
-    def render(self, device):
+    def _render(self, device):
         """Renders the click.
 
         Note that we don't make use of gain_pattern here -- this is exposed to
@@ -48,7 +48,6 @@ class ThalerClick(robin.pulse.Pulse):
             provides us rate, channels, and np_format members.
         """
         t_axis = self.t_axis(device)
-        print t_axis
         return sum([
             subclick(t_axis, self.envelope, peak)
             for peak in self.peaks

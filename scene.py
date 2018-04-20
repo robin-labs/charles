@@ -8,6 +8,7 @@ from robin.plotting.util import plot_samples
 
 from util import plot_scene 
 
+
 class EchoSource(object):
     def __init__(self, position, surface_area=1, refraction=1):
         self.position = position
@@ -26,7 +27,7 @@ class EchoSource(object):
 
 
 class HeadModel(object):
-    def __init__(self, hrtf_data_getter, ear_distance=0.1):
+    def __init__(self, hrtf_data_getter, ear_distance=0.0):
         self.hrtf_data_getter = hrtf_data_getter
         self.ear_distance = ear_distance
 
@@ -38,11 +39,15 @@ class HeadModel(object):
 
     def apply_hrtf(self, sample, source, channel):
         sample_at_channel = sample[:, channel]
+        azimuth = source.azimuth()
+        abs_azimuth = abs(azimuth)
+        select_channel = channel if azimuth == abs_azimuth else (1 - channel)
         impulse_response = (
-            self.hrtf_data_getter(0, source.azimuth())[:, channel]
+            self.hrtf_data_getter(0, abs_azimuth)[:, select_channel]
         )
         output = np.convolve(sample_at_channel, impulse_response)
         return output
+
 
 def generate_random_echo_sources(n=5, dist_bounds=(2,3), sa_bounds=(0.5, 0.5)):
     for _ in xrange(n):
