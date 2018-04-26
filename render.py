@@ -8,11 +8,11 @@ import robin.util
 SPEED_OF_SOUND = 343 # m/s
 
 
-def render_scene(fs, device, rnd_pulse, head_model, sources, itd_compress):
-    return Timeline([Layer(rnd_pulse)] + [
-        EchoLayer(rnd_pulse, echo_source, head_model, itd_compress)
+def render_scene(fs, device, pulse, head_model, sources, itd_compress):
+    return Timeline([Layer(pulse.render(device))] + [
+        EchoLayer(pulse, echo_source, head_model, itd_compress)
         for echo_source in sources
-    ]).render(fs)
+    ]).render(fs, device)
 
 
 def distance_delay_in_samples(fs, distance):
@@ -39,22 +39,23 @@ class Layer(object):
         self.delays = delays
         self.CHANNELS = xrange(2)
 
-    def render(self, fs):
+    def render(self, fs, device):
         for i in self.CHANNELS:
             yield self.rnd_pulse[:, i], self.delays[i]
 
 
 class EchoLayer(object):
-    def __init__(self, rnd_pulse, echo_source, head_model, itd_compress=1):
-        self.rnd_pulse = rnd_pulse
+    def __init__(self, pulse, echo_source, head_model, itd_compress=1):
+        self.pulse = pulse
         self.echo_source = echo_source
         self.head_model = head_model
         self.itd_compress = itd_compress
         self.CHANNELS = xrange(2)
 
-    def render(self, fs):
+    def render(self, fs, device):
         channel_delays = []
         samples = []
+        rnd_pulse = self.pulse.render(device)
         for channel in self.CHANNELS:
             distance = self.echo_source.distance_to_point(
                 self.head_model.ear_position_of_channel(channel)
@@ -64,10 +65,14 @@ class EchoLayer(object):
                 distance,
                 self.echo_source.surface_area
             )
+            if False and hasattr(self.pulse, "gain_at_azimuth"):
+                attenuation *= self.pulse.gain_at_azimuth(
+                    self.echo_source.azimuth()
+                )
             channel_delays.append(delay)
             samples.append(
                 self.head_model.apply_hrtf(
-                    attenuation * self.rnd_pulse,
+                    attenuation * rnd_pulse,
                     self.echo_source,
                     channel
                 )
@@ -84,10 +89,12 @@ class Timeline(object):
     def add_layer(self, layer):
         self.layers.append(layer)
 
-    def render(self, fs):
+    def render(self, fs, device):
         scene = np.zeros((1, 2))
         for layer in self.layers:
-            for channel, (chan_sample, delay) in enumerate(layer.render(fs)):
+            for channel, (chan_sample, delay) in enumerate(
+                layer.render(fs, device)
+            ):
                 end_sample = len(chan_sample) + delay - 1
                 if len(scene) < end_sample:
                     scene = robin.util.zero_pad(scene, right_length=end_sample)
