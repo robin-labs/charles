@@ -37,7 +37,7 @@ fs = 96000
 f0, f1, dur = 1.0e4, 2.2e4, 1e6 * 0.001
 np_format = np.float64
 device = DeviceShim(fs, 2, np_format)
-pulse = ExpertClick().render(device)
+pulse = ExpertClick()
 head = HeadModel(hrtf.make_hrtf_data_getter(fs)[0])
 
 print pulse
@@ -45,9 +45,13 @@ print pulse
 def write_scenes(name):
     for az in np.linspace(0, 180, 19):
         az_rad = az * np.pi / 180
-        echo_sources = single_echo_source(1, az_rad)
-        scene = render_scene(fs, device, pulse, head, echo_sources, 1)
-        write_scene(fs, scene, "output/{0}-{1}.wav".format(name, az))
+        az_disp = az - 90
+        for dist in (1.5, 2, 3):
+            echo_sources = single_echo_source(dist, az_rad)
+            scene = render_scene(fs, device, pulse, head, echo_sources, 1)
+            write_scene(fs, scene, "output/{0}_{1}m_{2}.wav".format(
+                name, dist, az_disp
+            ))
 
 
 if __name__ == "__main__":

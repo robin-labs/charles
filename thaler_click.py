@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 
 import robin.pulse
 import numpy as np
@@ -52,6 +52,16 @@ class ThalerClick(robin.pulse.Pulse):
             subclick(t_axis, self.envelope, peak)
             for peak in self.peaks
         ])
+
+    def gain_at_azimuth(self, azimuth):
+        (a, b) = self.gain_pattern
+        def gain_fn(theta_head):
+            theta = theta_head * np.pi / 180
+            return -(1 + np.cos(theta)) / np.sqrt(
+                (a * np.cos(theta)) ** 2 +
+                (b * np.sin(theta)) ** 2
+            )
+        return gain_fn(azimuth) / gain_fn(0)
 
 
 class ExpertClick(ThalerClick):
