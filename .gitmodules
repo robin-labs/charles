@@ -4,3 +4,6 @@
 [submodule "hrtf"]
 	path = hrtf
 	url = https://github.com/robin-labs/hrtf
+[submodule "charles"]
+	path = charles
+	url = https://github.com/robin-labs/charles
