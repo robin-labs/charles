@@ -1,8 +1,9 @@
 from __future__ import absolute_import, division
 
-import robin.pulse
 import numpy as np
+import robin.pulse
 
+import hrtf
 
 class ThalerClick(robin.pulse.Pulse):
     def __init__(self, envelope, peaks):
@@ -50,7 +51,7 @@ class ThalerClick(robin.pulse.Pulse):
 
 
 class Echolocator(object):
-    def __init__(self, height_meters, hrtf_getter, pulse, pulse_gain_pattern):
+    def __init__(self, height_meters, hrtf, pulse, pulse_gain_pattern):
         self.height_meters = height_meters
         self.gain_pattern = gain_pattern
         self.pulse = pulse
@@ -73,6 +74,7 @@ class ExampleEcholocator(Echolocator):
     def __init__(self):
         super(ExpertEcholocator, self).__init__(
             height_meters=1.70,  # One of me
+            hrtf=hrtf.HRTF(),
             pulse=ThalerClick(
                 (0.388, 1.57e3, 1.10 * 1e-3),
                 [
@@ -82,6 +84,6 @@ class ExampleEcholocator(Echolocator):
                     (9.97 * 1e3, 0.868, 1.72),
                     (11.88 * 1e3, 1.00, 1.39),
                 ]
-            )
-            gain_pattern=(0.130, 0.282)
+            ),
+            pulse_gain_pattern=(0.130, 0.282)
         )
