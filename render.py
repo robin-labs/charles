@@ -5,6 +5,7 @@ import math
 import numpy as np
 import robin.util
 
+import geom
 import raycast
 
 SPEED_OF_SOUND = 343  # m/s
@@ -24,10 +25,10 @@ def distance_delay_in_samples(fs, distance):
 
 
 def apply_hrtf(hrtf, position, sample, channel):
-    azimuth, inclination = geom.rectangular_to_polar_degrees(position)
+    azimuth, elevation = geom.rectangular_to_polar_degrees(position)
     return np.convolve(
         sample[:, channel],
-        hrtf.get_at_angle(inclination, azimuth, channel)
+        hrtf.get_at_angle(elevation, azimuth, channel)
     )
 
 
