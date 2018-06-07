@@ -5,13 +5,17 @@ import math
 import numpy as np
 import robin.util
 
-SPEED_OF_SOUND = 343 # m/s
+import raycast
+
+SPEED_OF_SOUND = 343  # m/s
 
 
-def render_scene(fs, device, pulse, head_model, sources, itd_compress):
-    return Timeline([Layer(pulse.render(device))] + [
-        EchoLayer(pulse, echo_source, head_model, itd_compress)
-        for echo_source in sources
+def render_scene(fs, device, echolocator, scene):
+    rendered_pulse = echolocator.pulse.render(device)
+    return Timeline([Layer(rendered_pulse)] + [
+        EchoLayer(rendered_pulse, position_meters, power_watts)
+        for position_meters, power_watts
+        in raycast.cast_lambertian(echolocator, scene)
     ]).render(fs, device)
 
 
@@ -19,18 +23,12 @@ def distance_delay_in_samples(fs, distance):
     return int(2 * fs * distance / SPEED_OF_SOUND)
 
 
-def simple_attenuation_coeff(distance, surface_area, air_loss_coeff=None):
-    d_full_power_wavefront = 0.1
-    relative_surface_area = (surface_area / d_full_power_wavefront) ** 2
-    return relative_surface_area / (distance / d_full_power_wavefront) ** 4
-
-
-def moderate_itds_for(delays, itd_compress):
-    [left, right] = delays
-    mean = (left + right) / 2
-    difference = left - right
-    new_difference = difference / itd_compress
-    return map(int, [mean + new_difference / 2, mean - new_difference / 2])
+def apply_hrtf(hrtf, position, sample, channel):
+    azimuth, inclination = geom.rectangular_to_polar_degrees(position)
+    return np.convolve(
+        sample[:, channel],
+        hrtf.get_at_angle(inclination, azimuth, channel)
+    )
 
 
 class Layer(object):
@@ -45,62 +43,44 @@ class Layer(object):
 
 
 class EchoLayer(object):
-    def __init__(self, pulse, echo_source, head_model, itd_compress=1):
-        self.pulse = pulse
-        self.echo_source = echo_source
-        self.head_model = head_model
-        self.itd_compress = itd_compress
+    def __init__(self, sample, position_meters, power_watts):
+        self.sample = sample
+        self.position_meters = position_meters
+        self.power_watts = power_watts
         self.CHANNELS = xrange(2)
 
-    def render(self, fs, device):
-        channel_delays = []
+    def render(self, fs, device, hrtf_getter):
         samples = []
-        rnd_pulse = self.pulse.render(device)
+        distance_meters = np.linalg.norm(self.position_meters)
+        delay = distance_delay_in_samples(fs, distance_meters)
         for channel in self.CHANNELS:
-            distance = self.echo_source.distance_to_point(
-                self.head_model.ear_position_of_channel(channel)
-            )
-            delay = distance_delay_in_samples(fs, distance)
-            attenuation = simple_attenuation_coeff(
-                distance,
-                self.echo_source.surface_area
-            )
-            if False and hasattr(self.pulse, "gain_at_azimuth"):
-                attenuation *= self.pulse.gain_at_azimuth(
-                    self.echo_source.azimuth()
-                )
-            channel_delays.append(delay)
             samples.append(
-                self.head_model.apply_hrtf(
-                    attenuation * rnd_pulse,
-                    self.echo_source,
+                apply_hrtf(
+                    hrtf_getter,
+                    self.position_meters,
+                    self.sample,
                     channel
                 )
             )
-        channel_delays = moderate_itds_for(channel_delays, self.itd_compress)
         for i in self.CHANNELS:
-            yield samples[i], channel_delays[i]
+            yield i, samples[i], delay
 
 
 class Timeline(object):
-    def __init__(self, layers=None):
-        self.layers = layers or []
-
-    def add_layer(self, layer):
-        self.layers.append(layer)
+    def __init__(self, layers):
+        self.layers = layers
 
     def render(self, fs, device):
         scene = np.zeros((1, 2))
         for layer in self.layers:
-            for channel, (chan_sample, delay) in enumerate(
-                layer.render(fs, device)
-            ):
-                end_sample = len(chan_sample) + delay - 1
+            for channel, sample, delay in enumerate(layer.render(fs, device)):
+                channel_sample = sample[:, channel]
+                end_sample = len(channel_sample) + delay - 1
                 if len(scene) < end_sample:
                     scene = robin.util.zero_pad(scene, right_length=end_sample)
                 scene[:, channel] += robin.util.zero_pad(
-                    chan_sample,
+                    channel_sample,
                     left_length=delay,
-                    right_length=(len(scene) - len(chan_sample) - delay)
+                    right_length=(len(scene) - len(channel_sample) - delay)
                 )
         return scene

@@ -31,28 +31,32 @@ def read_hrtf_filter(elevation, azimuth, fs=44100, dtype=np.float64):
     return samplerate.resample(data, fs / 44100, "sinc_best").astype(dtype)
 
 
-def make_hrtf_data_getter(fs, elevations=[0], dtype=None):
-    filters = {}
-    for elevation in elevations:
-        filters[elevation] = {}
-        azimuths = read_hrtf_azimuths_from_directory(elevation)
-        for azimuth in azimuths:
-            filters[elevation][azimuth] = read_hrtf_filter(
-                elevation,
-                azimuth,
-                fs,
-                dtype
-            )
+class HRTF(object):
+    def __init__(self, fs, elevations=[0], dtype=None):
+        self.azimuth_elevation_pairs = []
+        self.filters = {}
+        for elevation in elevations:
+            self.filters[elevation] = {}
+            azimuths = read_hrtf_azimuths_from_directory(elevation)
+            for azimuth in azimuths:
+                self.filters[elevation][azimuth] = read_hrtf_filter(
+                    elevation,
+                    azimuth,
+                    fs,
+                    dtype
+                )
+                self.azimuth_elevation_pairs.append((azimuth, elevation))
 
-    def possible(elevation):
-        return filters[elevation].keys()
-
-    def getter(elevation, azimuth):
-        assert elevation in filters.keys()
-        possible_azimuths = filters[elevation].keys()
+    def get_at_angle(self, elevation, azimuth, channel):
+        assert elevation in self.filters.keys()
+        possible_azimuths = self.filters[elevation].keys()
         closest_azimuth = sorted(
             possible_azimuths,
             key=lambda p: abs(p - azimuth)
         )[0]
-        return filters[elevation][closest_azimuth]
-    return getter, possible
+        select_channel = (
+            channel
+            if closest_azimuth == abs(closest_azimuth)
+            else 1 - channel
+        )
+        return self.filters[elevation][abs(closest_azimuth)][:, select_channel]
