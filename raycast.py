@@ -1,19 +1,20 @@
-from __future__ import division
+from __future__ import absolute_import, division
 
 import numpy as np
 
 import geom
 
 
-def cast_all_rays_for_echolocator(echolocator):
+def cast_all_rays_for_echolocator(echolocator, power_watts=0.1):
     pairs = echolocator.hrtf.azimuth_elevation_pairs
-    power_per_ray = 1 / len(pairs)
-    for (azimuth, inclination) in pairs:
+    power_per_ray = power_watts / len(pairs)
+    for (azimuth, elevation) in pairs:
         power = power_per_ray * echolocator.gain_at_azimuth(azimuth)
-        yield power, geom.Ray(
+        ray = geom.Ray(
             echolocator.origin,
-            geom.polar_degrees_to_rectangular(azimuth, inclination)
+            geom.polar_degrees_to_rectangular(azimuth, elevation)
         )
+        yield ray, power
 
 
 def cast_lambertian(echolocator, scene_objects, max_distance=float('inf')):
@@ -36,14 +37,17 @@ def cast_lambertian(echolocator, scene_objects, max_distance=float('inf')):
 
     Returns:
         An array of (intersection, reflection) tuples where...
-            intersection: np.array([x, y, z])
-            reflection: a reflection coefficient on [0, 1] representing the
-                fraction of incident power returned to the receiver.
+            intersection: np.array([x, y, z]) which is relative to the
+                echolocator's origin!
+            reflection: the total amount of power received from the echo from
+                this intersection
     """
     echoes = []
-    for ray_coeff, ray in cast_all_rays_for_echolocator(echolocator):
+    for ray, power in cast_all_rays_for_echolocator(echolocator):
+        if power == 0:
+            continue
         intersected_point = None
-        intersected_coefficient = None
+        total_power_from_intersected_point = None
         min_distance = max_distance
         for scene_object in scene_objects:
             for intersectable in scene_object.get_intersectables():
@@ -56,9 +60,20 @@ def cast_lambertian(echolocator, scene_objects, max_distance=float('inf')):
                     if distance < min_distance:
                         min_distance = distance
                         intersected_point = intersection.position
-                    intersected_coefficient = abs(intersection.normal.dot(
+                    incident_coefficient = abs(intersection.normal.dot(
                         ray.orientation
-                    )) * scene_object.get_reflectivity() * ray_coeff
+                    ))
+                    reflectivity_coefficient = scene_object.get_reflectivity()
+                    attenuation_coefficient = 1 / distance ** 4
+                    total_power_from_intersected_point = (
+                        power *
+                        incident_coefficient *
+                        reflectivity_coefficient *
+                        attenuation_coefficient
+                    )
         if intersected_point is not None:
-            echoes.append((intersected_point, intersected_coefficient))
+            echoes.append((
+                intersected_point - echolocator.origin,
+                total_power_from_intersected_point,
+            ))
     return echoes

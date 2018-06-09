@@ -6,7 +6,6 @@ import re
 import numpy as np
 import samplerate
 
-
 def read_hrtf_azimuths_from_directory(elevation):
     extractor = re.compile("^H(?:-?[0-9]+)e(?P<azimuth>[0-9]+)a.dat$")
     for file in os.listdir(os.path.join(
@@ -39,24 +38,22 @@ class HRTF(object):
             self.filters[elevation] = {}
             azimuths = read_hrtf_azimuths_from_directory(elevation)
             for azimuth in azimuths:
-                self.filters[elevation][azimuth] = read_hrtf_filter(
-                    elevation,
-                    azimuth,
-                    fs,
-                    dtype
+                filter = read_hrtf_filter(elevation, azimuth, fs, dtype)
+                self.filters[elevation][azimuth] = filter
+                self.azimuth_elevation_pairs.append(
+                    (azimuth, elevation)
                 )
-                self.azimuth_elevation_pairs.append((azimuth, elevation))
+                self.filters[elevation][-azimuth] = filter[:,[1,0]]
+                self.azimuth_elevation_pairs.append(
+                    (-azimuth, elevation)
+                )
 
-    def get_at_angle(self, elevation, azimuth, channel):
+    def get_at_angle(self, azimuth, elevation, channel):
         assert elevation in self.filters.keys()
         possible_azimuths = self.filters[elevation].keys()
         closest_azimuth = sorted(
             possible_azimuths,
             key=lambda p: abs(p - azimuth)
         )[0]
-        select_channel = (
-            channel
-            if closest_azimuth == abs(closest_azimuth)
-            else 1 - channel
-        )
-        return self.filters[elevation][abs(closest_azimuth)][:, select_channel]
+        filter = self.filters[elevation][closest_azimuth]
+        return filter[:, channel]

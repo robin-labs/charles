@@ -2,6 +2,7 @@ from __future__ import division
 
 import math
 
+import matplotlib.pyplot as plt
 import numpy as np
 import robin.util
 
@@ -17,7 +18,7 @@ def render_scene(fs, device, echolocator, scene):
         EchoLayer(rendered_pulse, position_meters, power_watts)
         for position_meters, power_watts
         in raycast.cast_lambertian(echolocator, scene)
-    ]).render(fs, device)
+    ]).render(fs, echolocator)
 
 
 def distance_delay_in_samples(fs, distance):
@@ -28,7 +29,7 @@ def apply_hrtf(hrtf, position, sample, channel):
     azimuth, elevation = geom.rectangular_to_polar_degrees(position)
     return np.convolve(
         sample[:, channel],
-        hrtf.get_at_angle(elevation, azimuth, channel)
+        hrtf.get_at_angle(azimuth, elevation, channel)
     )
 
 
@@ -38,9 +39,9 @@ class Layer(object):
         self.delays = delays
         self.CHANNELS = xrange(2)
 
-    def render(self, fs, device):
+    def render(self, fs, _):
         for i in self.CHANNELS:
-            yield self.rnd_pulse[:, i], self.delays[i]
+            yield i, self.rnd_pulse[:, i], self.delays[i]
 
 
 class EchoLayer(object):
@@ -50,38 +51,33 @@ class EchoLayer(object):
         self.power_watts = power_watts
         self.CHANNELS = xrange(2)
 
-    def render(self, fs, device, hrtf_getter):
-        samples = []
+    def render(self, fs, echolocator):
         distance_meters = np.linalg.norm(self.position_meters)
         delay = distance_delay_in_samples(fs, distance_meters)
         for channel in self.CHANNELS:
-            samples.append(
-                apply_hrtf(
-                    hrtf_getter,
-                    self.position_meters,
-                    self.sample,
-                    channel
-                )
+            sample = np.sqrt(self.power_watts) * apply_hrtf(
+                echolocator.hrtf,
+                self.position_meters,
+                self.sample,
+                channel
             )
-        for i in self.CHANNELS:
-            yield i, samples[i], delay
+            yield channel, sample, delay
 
 
 class Timeline(object):
     def __init__(self, layers):
         self.layers = layers
 
-    def render(self, fs, device):
+    def render(self, fs, echolocator):
         scene = np.zeros((1, 2))
         for layer in self.layers:
-            for channel, sample, delay in enumerate(layer.render(fs, device)):
-                channel_sample = sample[:, channel]
-                end_sample = len(channel_sample) + delay - 1
+            for channel, sample, delay in layer.render(fs, echolocator):
+                end_sample = len(sample) + delay - 1
                 if len(scene) < end_sample:
                     scene = robin.util.zero_pad(scene, right_length=end_sample)
                 scene[:, channel] += robin.util.zero_pad(
-                    channel_sample,
+                    sample,
                     left_length=delay,
-                    right_length=(len(scene) - len(channel_sample) - delay)
+                    right_length=(len(scene) - len(sample) - delay)
                 )
         return scene
