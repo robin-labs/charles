@@ -6,6 +6,15 @@ import re
 import numpy as np
 import samplerate
 
+
+def read_hrtf_elevations():
+    extractor = re.compile("^elev(?P<elevation>-?[0-9]+)$")
+    for file in os.listdir("hrtf"):
+        matched = extractor.match(file)
+        if matched:
+            yield int(matched.group("elevation"))
+
+
 def read_hrtf_azimuths_from_directory(elevation):
     extractor = re.compile("^H(?:-?[0-9]+)e(?P<azimuth>[0-9]+)a.dat$")
     for file in os.listdir(os.path.join(
@@ -31,10 +40,10 @@ def read_hrtf_filter(elevation, azimuth, fs=44100, dtype=np.float64):
 
 
 class HRTF(object):
-    def __init__(self, fs, elevations=[0], dtype=None):
+    def __init__(self, fs, dtype=None):
         self.azimuth_elevation_pairs = []
         self.filters = {}
-        for elevation in elevations:
+        for elevation in read_hrtf_elevations():
             self.filters[elevation] = {}
             azimuths = read_hrtf_azimuths_from_directory(elevation)
             for azimuth in azimuths:
@@ -43,17 +52,21 @@ class HRTF(object):
                 self.azimuth_elevation_pairs.append(
                     (azimuth, elevation)
                 )
-                self.filters[elevation][-azimuth] = filter[:,[1,0]]
+                self.filters[elevation][-azimuth] = filter[:, [1, 0]]
                 self.azimuth_elevation_pairs.append(
                     (-azimuth, elevation)
                 )
 
     def get_at_angle(self, azimuth, elevation, channel):
-        assert elevation in self.filters.keys()
-        possible_azimuths = self.filters[elevation].keys()
+        possible_elevations = self.filters.keys()
+        closest_elevation = sorted(
+            possible_elevations,
+            key=lambda p: abs(p - elevation)
+        )[0]
+        possible_azimuths = self.filters[closest_elevation].keys()
         closest_azimuth = sorted(
             possible_azimuths,
             key=lambda p: abs(p - azimuth)
         )[0]
-        filter = self.filters[elevation][closest_azimuth]
+        filter = self.filters[closest_elevation][closest_azimuth]
         return filter[:, channel]

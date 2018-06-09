@@ -5,7 +5,7 @@ import numpy as np
 import geom
 
 
-def cast_all_rays_for_echolocator(echolocator, power_watts=0.1):
+def cast_all_rays_for_echolocator(echolocator, power_watts=1):
     pairs = echolocator.hrtf.azimuth_elevation_pairs
     power_per_ray = power_watts / len(pairs)
     for (azimuth, elevation) in pairs:
