@@ -1,17 +1,21 @@
 
-import robin.pulse
-import robin.plotting
+from . import robin.pulse
+from . import robin.plotting
 import scipy.stats
 
 import distribution
-import util
+from . import util
 
 fs = 96000
-Q = lambda x: scipy.stats.norm.pdf(
+
+
+def Q(x): return scipy.stats.norm.pdf(
     x if x <= 180 else x - 360,
     loc=0,
     scale=1
 )
+
+
 chirp = robin.pulse.Chirp(2e4, 3e4, 50e3)
 
 res = distribution.render_pulse_with_distribution(fs, chirp, Q)

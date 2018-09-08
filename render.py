@@ -1,13 +1,13 @@
-from __future__ import division
+
 
 import math
 
 import matplotlib.pyplot as plt
 import numpy as np
-import robin.util
+from . import robin.util
 
-import geom
-import raycast
+from . import geom
+from . import raycast
 
 SPEED_OF_SOUND = 343  # m/s
 
@@ -37,7 +37,7 @@ class Layer(object):
     def __init__(self, rnd_pulse, delays=(0, 0)):
         self.rnd_pulse = rnd_pulse
         self.delays = delays
-        self.CHANNELS = xrange(2)
+        self.CHANNELS = range(2)
 
     def render(self, fs, _):
         for i in self.CHANNELS:
@@ -49,7 +49,7 @@ class EchoLayer(object):
         self.sample = sample
         self.position_meters = position_meters
         self.power_watts = power_watts
-        self.CHANNELS = xrange(2)
+        self.CHANNELS = range(2)
 
     def render(self, fs, echolocator):
         distance_meters = np.linalg.norm(self.position_meters)

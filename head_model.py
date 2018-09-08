@@ -1,8 +1,8 @@
-from __future__ import division
+
 
 import numpy as np
 
-import geom
+from . import geom
 
 
 class HeadModel(object):

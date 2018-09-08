@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division
+
 
 import os
 import re
@@ -58,12 +58,12 @@ class HRTF(object):
                 )
 
     def get_at_angle(self, azimuth, elevation, channel):
-        possible_elevations = self.filters.keys()
+        possible_elevations = list(self.filters.keys())
         closest_elevation = sorted(
             possible_elevations,
             key=lambda p: abs(p - elevation)
         )[0]
-        possible_azimuths = self.filters[closest_elevation].keys()
+        possible_azimuths = list(self.filters[closest_elevation].keys())
         closest_azimuth = sorted(
             possible_azimuths,
             key=lambda p: abs(p - azimuth)

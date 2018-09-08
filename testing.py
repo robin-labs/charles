@@ -1,8 +1,12 @@
-from __future__ import absolute_import
+
 
 import numpy as np
 
-import echolocator, hrtf, render, scene, util
+import echolocator
+import hrtf
+import render
+import scene
+import util
 
 fs = 96000
 device = util.DeviceShim(fs, 2, np.float64)

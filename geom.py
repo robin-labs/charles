@@ -1,10 +1,9 @@
-from __future__ import absolute_import
-
 import numpy as np
+
+return vec / np.linalg.norm(vec)
 
 
 def normalize(vec):
-    return vec / np.linalg.norm(vec)
 
 
 def point_distance(p1, p2):
@@ -52,8 +51,9 @@ class Intersectable(object):
 
 
 class Face(Intersectable):
-    def __init__(self, (a, b, c)):
+    def __init__(self, xxx_todo_changeme):
         # TODO: add non-colinearity test here
+        (a, b, c) = xxx_todo_changeme
         self.vertices = (a, b, c)
         self.normal = normalize(np.cross(a - b, b - c))
         self.origin = self.normal.dot(self.vertices[0]) * self.normal

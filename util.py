@@ -17,7 +17,7 @@ def convolve_multi_channel(a, b):
     assert a.shape[1] == b.shape[1]
     num_chans = a.shape[1]
     result = np.zeros((len(a) + len(b) - 1, num_chans))
-    for chan in xrange(num_chans):
+    for chan in range(num_chans):
         result[:, chan] = np.convolve(a[:, chan], b[:, chan])
     return result
 

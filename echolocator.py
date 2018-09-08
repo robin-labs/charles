@@ -1,7 +1,8 @@
-from __future__ import absolute_import, division
+
 
 import numpy as np
 import robin.pulse
+
 
 class ThalerClick(robin.pulse.Pulse):
     def __init__(self, envelope, peaks):
@@ -36,7 +37,9 @@ class ThalerClick(robin.pulse.Pulse):
         device: an object implementing the Robin device API, meaning that it
             provides us rate, channels, and np_format members.
         """
-        def subclick(t, (a, b, c), (freq, magnitude, phase)):
+        def subclick(t, xxx_todo_changeme, xxx_todo_changeme1):
+            (a, b, c) = xxx_todo_changeme
+            (freq, magnitude, phase) = xxx_todo_changeme1
             heaviside = 0.5 * (1 + np.sign(t - c))
             center = magnitude * np.cos(2 * np.pi * freq * t + phase)
             envelope = a * np.exp(-b * t - c)
@@ -57,6 +60,7 @@ class Echolocator(object):
 
     def gain_at_azimuth(self, azimuth):
         (a, b) = self.pulse_gain_pattern
+
         def gain_fn(theta_head):
             theta = theta_head * np.pi / 180
             return -(1 + np.cos(theta)) / np.sqrt(

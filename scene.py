@@ -1,6 +1,6 @@
 import numpy as np
 
-import geom
+from . import geom
 
 
 class SceneObject(object):
