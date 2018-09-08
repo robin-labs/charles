@@ -7,3 +7,6 @@
 [submodule "charles"]
 	path = charles
 	url = https://github.com/robin-labs/charles
+[submodule "zed-python"]
+	path = zed-python
+	url = http://github.com/stereolabs/zed-python

@@ -1,8 +1,6 @@
 import random
 
 import numpy as np
-import scikits.audiolab
-
 
 class DeviceShim(object):
     """Lets us interface with Robin code without making a fuss"""
@@ -25,14 +23,3 @@ def convolve_multi_channel(a, b):
 def plot_scene(fs, scene):
     t_axis = robin.util.t_axis(scene, fs)
     robin.plotting.util.plot_stereo(t_axis, scene[:, 0], scene[:, 1])
-
-
-def write_scene(fs, scene, filename):
-    sf = scikits.audiolab.Sndfile(
-        filename,
-        format=scikits.audiolab.Format(),
-        channels=2,
-        samplerate=fs,
-        mode='w'
-    )
-    sf.write_frames(scene)
